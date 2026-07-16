@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistem Koperasi - Auto Sync ke Google Sheets</title>
+    <title>Sistem Koperasi - Sync dengan Google Sheets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -702,7 +702,7 @@
     }
 
     // ============================================================
-    // SINKRONISASI KE GOOGLE SHEETS (AUTO + MANUAL)
+    // SINKRONISASI KE GOOGLE SHEETS (AUTO + MANUAL) - DENGAN MERGE
     // ============================================================
     function showLoading(show) {
         const spinners = document.querySelectorAll('#sync-spinner, #sync-spinner-header');
@@ -721,41 +721,51 @@
         if (isSyncing) return;
         isSyncing = true;
         showLoading(true);
-        showToast('Menyimpan ke Google Sheets...', 'warning');
+        showToast('Menyinkronkan dengan Google Sheets...', 'warning');
 
         try {
-            // 1. Test koneksi (GET)
-            console.log('🔍 Testing connection...');
-            const test = await fetch(url + '?test=true');
-            if (!test.ok) throw new Error(`HTTP ${test.status} - ${test.statusText}`);
-            const testData = await test.json();
-            console.log('✅ Connection test:', testData);
-            if (testData.status !== 'connected') throw new Error('Server tidak merespons "connected"');
+            // 1. Ambil data terbaru dari Google Sheets (GET)
+            console.log('📥 Mengambil data dari Google Sheets...');
+            const getResp = await fetch(url);
+            if (!getResp.ok) throw new Error(`HTTP ${getResp.status}`);
+            const cloudData = await getResp.json();
+            console.log('📦 Data dari cloud:', cloudData);
 
-            // 2. Kirim data (POST with no-cors)
-            console.log('📤 Sending data...');
+            // 2. Merge data: Anggota & Barang -> timpa dengan data cloud (karena bisa diubah di sheet)
+            if (cloudData.anggota && cloudData.anggota.length > 0) {
+                state.anggota = cloudData.anggota;
+            }
+            if (cloudData.barang && cloudData.barang.length > 0) {
+                state.barang = cloudData.barang;
+            }
+
+            // 3. Merge transaksi: gabungkan data cloud dengan data lokal, hindari duplikat berdasarkan id
+            if (cloudData.transaksi && cloudData.transaksi.length > 0) {
+                const localTransMap = {};
+                state.transaksi.forEach(t => { localTransMap[t.id] = t; });
+                cloudData.transaksi.forEach(t => {
+                    if (!localTransMap[t.id]) {
+                        state.transaksi.push(t);
+                    }
+                });
+                // Pertahankan transaksi lokal yang tidak ada di cloud (baru)
+            }
+
+            // 4. Simpan state lokal
+            saveState();
+            renderAll();
+
+            // 5. Kirim data lokal ke Google Sheets (POST) untuk update
+            console.log('📤 Mengirim data ke Google Sheets...');
             const payload = { anggota: state.anggota, barang: state.barang, transaksi: state.transaksi };
             await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
-                mode: 'no-cors' // menghindari preflight
+                mode: 'no-cors'
             });
-            // Karena no-cors, kita tidak bisa baca response, tapi request tetap terkirim
 
-            // 3. Ambil data terbaru (GET)
-            console.log('📥 Fetching latest data...');
-            const getResp = await fetch(url);
-            if (!getResp.ok) throw new Error(`HTTP ${getResp.status} - ${getResp.statusText}`);
-            const data = await getResp.json();
-            console.log('📦 Data dari cloud:', data);
-
-            if (data.anggota) state.anggota = data.anggota;
-            if (data.barang) state.barang = data.barang;
-            if (data.transaksi) state.transaksi = data.transaksi;
-            saveState();
-            renderAll();
-            showToast('✅ Data berhasil disimpan ke Google Sheets!');
+            showToast('✅ Sinkronisasi selesai! Data dari Google Sheets telah digabung.');
         } catch (err) {
             console.error('❌ Sync error:', err);
             showToast('❌ Gagal sync: ' + err.message + '. Data tetap tersimpan di lokal.', 'error');
@@ -789,12 +799,12 @@
             if (e.key === 'Enter') tambahKasir();
         });
 
-        // Auto sync setelah 5 detik pertama (untuk memastikan data awal tersimpan)
+        // Auto sync setelah 3 detik untuk menarik data dari Google Sheets
         setTimeout(() => {
             if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== '') {
                 syncData();
             }
-        }, 2000);
+        }, 3000);
     };
 </script>
 </body>
