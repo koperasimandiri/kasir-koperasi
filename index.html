@@ -1,51 +1,43 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Koperasi - Manajemen Kasir & Anggota</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Koperasi - Auto Sync ke Google Sheets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <style>
         body { font-family: 'Inter', sans-serif; }
         .nav-item { transition: all 0.2s; }
-        .nav-item:hover { background: #1e293b; color: white; }
-        .nav-item.active { background: #1e293b; color: white; }
+        .nav-item:hover, .nav-item.active { background: #1e293b; color: white; }
         .nav-item.active i { color: #10b981; }
-        .cart-item { transition: background 0.2s; }
         .cart-item:hover { background: #f8fafc; }
         #login-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; inset: 0; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
         }
         #login-overlay.hidden { display: none; }
         .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(2px);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(2px);
+            z-index: 1000; display: none; align-items: center; justify-content: center;
         }
         .modal.open { display: flex; }
         .modal-content {
-            background: white;
-            border-radius: 16px;
-            max-width: 500px;
-            width: 90%;
-            padding: 24px;
+            background: white; border-radius: 16px; max-width: 500px; width: 90%; padding: 24px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
+        .sync-spinner {
+            border: 2px solid #e2e8f0;
+            border-top-color: #10b981;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -60,10 +52,10 @@
         <p class="text-sm text-slate-500">Pilih nama kasir yang bertugas</p>
         <select id="login-kasir-select" class="w-full p-3 border border-slate-300 rounded-xl text-sm"></select>
         <div class="flex gap-2">
-            <input type="text" id="login-kasir-new" placeholder="Nama kasir baru" class="flex-1 p-3 border border-slate-300 rounded-xl text-sm">
+            <input type="text" id="login-kasir-new" placeholder="Nama kasir baru" class="flex-1 p-3 border border-slate-300 rounded-xl text-sm" />
             <button onclick="tambahKasir()" class="px-4 py-3 bg-slate-200 hover:bg-slate-300 rounded-xl text-sm"><i class="fa-solid fa-plus"></i></button>
         </div>
-        <button onclick="loginKasir()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition">Masuk sebagai Kasir</button>
+        <button onclick="loginKasir()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition">Masuk</button>
         <div id="login-error" class="text-rose-500 text-sm hidden">Silakan pilih atau tambahkan kasir</div>
     </div>
 </div>
@@ -81,8 +73,14 @@
             <button id="mobile-menu-btn" class="md:hidden text-slate-300 hover:text-white"><i class="fa-solid fa-bars"></i></button>
         </div>
         <div class="px-6 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-xs">
-            <span class="flex items-center"><span id="conn-indicator" class="h-2 w-2 rounded-full bg-emerald-500 mr-2"></span><span id="conn-status">Online</span></span>
-            <button onclick="syncData()" class="text-emerald-400 hover:text-emerald-300"><i class="fa-solid fa-rotate mr-1"></i> Sync</button>
+            <span class="flex items-center">
+                <span id="conn-indicator" class="h-2 w-2 rounded-full bg-emerald-500 mr-2"></span>
+                <span id="conn-status">Online</span>
+            </span>
+            <button onclick="syncData()" class="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                <i class="fa-solid fa-rotate mr-1"></i> Sync
+                <span id="sync-spinner" class="sync-spinner hidden"></span>
+            </button>
         </div>
         <nav id="sidebar-menu" class="flex-1 px-4 py-4 space-y-1 hidden md:block">
             <button onclick="switchTab('dashboard')" class="nav-item w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium active" data-tab="dashboard"><i class="fa-solid fa-chart-pie mr-3 text-emerald-500"></i> Dashboard</button>
@@ -102,7 +100,10 @@
         <header class="bg-white border-b border-slate-200 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
             <div><h2 class="font-bold text-lg" id="header-title">Dashboard</h2><p class="text-xs text-slate-500" id="header-sub">Ringkasan aktivitas koperasi</p></div>
             <div class="flex gap-2">
-                <button onclick="syncData()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg flex items-center"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync</button>
+                <button onclick="syncData()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg flex items-center gap-1">
+                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync
+                    <span id="sync-spinner-header" class="sync-spinner hidden"></span>
+                </button>
             </div>
         </header>
 
@@ -179,7 +180,7 @@
                     <div><h3 class="font-bold text-lg">Laporan Transaksi</h3></div>
                     <div class="flex flex-wrap gap-2">
                         <select id="filter-laporan-kasir" class="p-2 border rounded-lg text-sm"></select>
-                        <input type="date" id="filter-laporan-tgl" class="p-2 border rounded-lg text-sm">
+                        <input type="date" id="filter-laporan-tgl" class="p-2 border rounded-lg text-sm" />
                         <button onclick="renderLaporan()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"><i class="fa-solid fa-filter mr-2"></i>Filter</button>
                         <button onclick="exportLaporanCSV()" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm"><i class="fa-solid fa-file-csv mr-2"></i>CSV</button>
                     </div>
@@ -228,9 +229,9 @@
 
 <script>
     // ============================================================
-    // KONFIGURASI
+    // KONFIGURASI - GANTI URL DENGAN WEB APP ANDA
     // ============================================================
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby50y4mXDLvpAarUjYdYrsgdVaqFVB4_19IUPbNA2zk5gz-BJvYuEaZ0WOScZ5v8jVemg/exec"; // GANTI
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby50y4mXDLvpAarUjYdYrsgdVaqFVB4_19IUPbNA2zk5gz-BJvYuEaZ0WOScZ5v8jVemg/exec";
 
     // ============================================================
     // STATE & UTILITIES
@@ -239,6 +240,7 @@
     let currentKasir = null;
     let cart = [];
     let chart = null;
+    let isSyncing = false;
 
     function loadState() {
         const saved = localStorage.getItem("koperasi_state");
@@ -281,7 +283,7 @@
         setTimeout(() => {
             el.classList.add("translate-y-2","opacity-0");
             setTimeout(() => el.remove(), 300);
-        }, 3500);
+        }, 4000);
     }
 
     // ============================================================
@@ -370,6 +372,16 @@
         populateSelect('kasir-barang', state.barang, 'id', 'nama (Stok: {stok})', 'stok');
         populateSelect('filter-laporan-kasir', [{id:'', nama:'Semua Kasir'}, ...state.kasir.map(k => ({id:k, nama:k}))], 'id', 'nama');
         renderLoginKasir();
+        // update connection indicator
+        const indicator = document.getElementById('conn-indicator');
+        const status = document.getElementById('conn-status');
+        if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== '') {
+            indicator.className = 'h-2 w-2 rounded-full bg-emerald-500 mr-2';
+            status.innerText = 'Online';
+        } else {
+            indicator.className = 'h-2 w-2 rounded-full bg-amber-500 mr-2 animate-pulse';
+            status.innerText = 'Offline';
+        }
     }
 
     function populateSelect(id, data, valKey, labelTemplate, extra) {
@@ -389,7 +401,7 @@
     }
 
     // ============================================================
-    // ANGGOTA
+    // ANGGOTA (dengan auto-sync)
     // ============================================================
     function renderAnggota() {
         const tbody = document.getElementById('table-anggota');
@@ -425,7 +437,6 @@
 
     function tutupModal(id) { document.getElementById(id).classList.remove('open'); }
 
-    // ===== PERBAIKAN: simpanAnggota langsung sync =====
     function simpanAnggota() {
         const id = document.getElementById('modal-anggota-id').value;
         const nama = document.getElementById('modal-anggota-nama').value.trim();
@@ -444,8 +455,7 @@
         saveState();
         tutupModal('modal-anggota');
         renderAll();
-        // Langsung sinkron ke Google Sheets
-        syncData();
+        syncData(); // auto-sync
     }
 
     function editAnggota(id) { bukaModalAnggota(id); }
@@ -460,7 +470,7 @@
     }
 
     // ============================================================
-    // BARANG
+    // BARANG (dengan auto-sync)
     // ============================================================
     function renderBarang() {
         const tbody = document.getElementById('table-barang');
@@ -492,7 +502,6 @@
         }
     }
 
-    // ===== PERBAIKAN: simpanBarang langsung sync =====
     function simpanBarang() {
         const id = document.getElementById('modal-barang-id').value;
         const nama = document.getElementById('modal-barang-nama').value.trim();
@@ -525,7 +534,7 @@
     }
 
     // ============================================================
-    // KASIR
+    // KASIR (dengan auto-sync transaksi)
     // ============================================================
     function loadKasir() {
         populateSelect('kasir-anggota', state.anggota, 'id', 'nama');
@@ -601,7 +610,7 @@
         renderAll();
         loadKasir();
         showToast('Transaksi berhasil!');
-        syncData(); // Langsung sync setelah transaksi
+        syncData();
     }
 
     function renderTodayTransactions() {
@@ -629,8 +638,7 @@
         document.getElementById('total-anggota').innerText = state.anggota.length;
         document.getElementById('total-barang').innerText = state.barang.length;
         document.getElementById('total-transaksi').innerText = state.transaksi.length;
-        const labels = [];
-        const data = [];
+        const labels = [], data = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
@@ -694,47 +702,66 @@
     }
 
     // ============================================================
-    // SINKRONISASI GOOGLE SHEETS (CORS FIX) + AUTO SYNC
+    // SINKRONISASI KE GOOGLE SHEETS (AUTO + MANUAL)
     // ============================================================
-    let isSyncing = false;
+    function showLoading(show) {
+        const spinners = document.querySelectorAll('#sync-spinner, #sync-spinner-header');
+        spinners.forEach(sp => {
+            if (show) sp.classList.remove('hidden');
+            else sp.classList.add('hidden');
+        });
+    }
 
     async function syncData() {
         const url = GOOGLE_SCRIPT_URL;
         if (!url || url.trim() === '') {
-            showToast('URL Web App tidak diisi', 'error');
+            showToast('URL Web App belum diisi', 'error');
             return;
         }
-        if (isSyncing) return; // cegah duplikat
+        if (isSyncing) return;
         isSyncing = true;
-        showToast('Menyimpan ke cloud...', 'warning');
-        try {
-            // Test koneksi
-            const test = await fetch(url + '?test=true');
-            if (!test.ok) throw new Error('Koneksi gagal');
+        showLoading(true);
+        showToast('Menyimpan ke Google Sheets...', 'warning');
 
-            // POST data
+        try {
+            // 1. Test koneksi (GET)
+            console.log('🔍 Testing connection...');
+            const test = await fetch(url + '?test=true');
+            if (!test.ok) throw new Error(`HTTP ${test.status} - ${test.statusText}`);
+            const testData = await test.json();
+            console.log('✅ Connection test:', testData);
+            if (testData.status !== 'connected') throw new Error('Server tidak merespons "connected"');
+
+            // 2. Kirim data (POST with no-cors)
+            console.log('📤 Sending data...');
             const payload = { anggota: state.anggota, barang: state.barang, transaksi: state.transaksi };
             await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
-                mode: 'no-cors'
+                mode: 'no-cors' // menghindari preflight
             });
+            // Karena no-cors, kita tidak bisa baca response, tapi request tetap terkirim
 
-            // GET data terbaru
+            // 3. Ambil data terbaru (GET)
+            console.log('📥 Fetching latest data...');
             const getResp = await fetch(url);
-            if (!getResp.ok) throw new Error('Gagal mengambil data');
+            if (!getResp.ok) throw new Error(`HTTP ${getResp.status} - ${getResp.statusText}`);
             const data = await getResp.json();
+            console.log('📦 Data dari cloud:', data);
+
             if (data.anggota) state.anggota = data.anggota;
             if (data.barang) state.barang = data.barang;
             if (data.transaksi) state.transaksi = data.transaksi;
             saveState();
             renderAll();
-            showToast('Data berhasil disimpan ke Google Sheets!');
+            showToast('✅ Data berhasil disimpan ke Google Sheets!');
         } catch (err) {
-            showToast('Gagal sync: ' + err.message + '. Data tetap tersimpan di lokal.', 'error');
+            console.error('❌ Sync error:', err);
+            showToast('❌ Gagal sync: ' + err.message + '. Data tetap tersimpan di lokal.', 'error');
         } finally {
             isSyncing = false;
+            showLoading(false);
         }
     }
 
@@ -761,6 +788,13 @@
         document.getElementById('login-kasir-new').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') tambahKasir();
         });
+
+        // Auto sync setelah 5 detik pertama (untuk memastikan data awal tersimpan)
+        setTimeout(() => {
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== '') {
+                syncData();
+            }
+        }, 2000);
     };
 </script>
 </body>
