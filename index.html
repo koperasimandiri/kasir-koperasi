@@ -107,7 +107,7 @@
             <div class="mt-2 flex justify-center gap-3">
                 <button onclick="bukaModalGantiPassword()" class="text-xs text-indigo-400 hover:text-indigo-300 transition font-medium"><i class="fa-solid fa-key mr-1"></i> Ganti Password</button>
                 <span class="text-slate-850">|</span>
-                <button onclick="logoutKasir()" class="text-xs text-rose-450 hover:text-rose-400 transition font-medium"><i class="fa-solid fa-sign-out-alt mr-1"></i> Keluar</button>
+                <button onclick="logoutKasir()" class="text-xs text-rose-450 hover:text-rose-450 transition font-medium"><i class="fa-solid fa-sign-out-alt mr-1"></i> Keluar</button>
             </div>
         </div>
     </aside>
@@ -243,11 +243,24 @@
                         </div>
                         <div class="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm">
                             <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><i class="fa-solid fa-basket-shopping text-emerald-555"></i> Keranjang Belanja</h4>
+                            
                             <div id="cart-items" class="space-y-1 max-h-64 overflow-y-auto divide-y divide-slate-100"></div>
+                            
+                            <!-- PILIHAN METODE PEMBAYARAN -->
+                            <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Metode Pembayaran</label>
+                                    <select id="kasir-metode-bayar" class="p-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="Tunai">Tunai / Cash (Tidak Potong Saldo)</option>
+                                        <option value="Saldo">Potong Saldo Simpanan Anggota</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="flex justify-between items-center border-t border-slate-100 pt-4 mt-4">
                                 <span class="font-bold text-slate-800 text-lg">Total Pembayaran: <span id="cart-total" class="text-emerald-600">Rp 0</span></span>
-                                <button onclick="bayarTransaksi()" class="px-6 py-2.5 bg-indigo-200 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-md shadow-indigo-650/15">
-                                    <i class="fa-solid fa-check mr-2"></i>Selesaikan dan Bayar
+                                <button onclick="bayarTransaksi()" class="px-6 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold transition shadow-md shadow-indigo-650/15">
+                                    <i class="fa-solid fa-check mr-2"></i>Selesaikan & Bayar
                                 </button>
                             </div>
                         </div>
@@ -280,6 +293,7 @@
                                     <th class="p-3 font-semibold">Tanggal</th>
                                     <th class="p-3 font-semibold">Anggota</th>
                                     <th class="p-3 font-semibold">Kasir</th>
+                                    <th class="p-3 font-semibold">Metode</th>
                                     <th class="p-3 text-right font-semibold">Total Belanja</th>
                                     <th class="p-3 font-semibold">Rincian Barang</th>
                                 </tr>
@@ -409,7 +423,7 @@
         barang: [], 
         transaksi: [], 
         kasir: [],
-        deletedIds: [] // Untuk mencatat ID terhapus (mencegah data terhapus kembali saat merge)
+        deletedIds: [] 
     };
     
     let currentKasir = null;
@@ -432,7 +446,6 @@
             }
         }
         
-        // Migrasi kasir dari string biasa ke tipe objek ber-password
         state.kasir = state.kasir.map(k => {
             if (typeof k === 'string') {
                 return { nama: k, password: "123" };
@@ -440,7 +453,6 @@
             return k;
         });
         
-        // Setup template lokal awal jika kosong sama sekali
         if (state.anggota.length === 0 && state.barang.length === 0 && state.kasir.length === 0) {
             state.anggota = [
                 { id: "A001", nama: "Budi Santoso", alamat: "Jl. Merdeka 10", no_telp: "08123456789", saldo: 500000 },
@@ -564,7 +576,7 @@
             currentKasir = nama;
             document.getElementById("login-overlay").classList.add("hidden");
             document.getElementById("sidebar-kasir").innerText = nama;
-            passInput.value = ""; // Bersihkan field setelah login sukses
+            passInput.value = ""; 
             showToast("Selamat bertugas, " + nama);
             renderAll();
         } else {
@@ -659,7 +671,6 @@
         populateSelect('filter-laporan-kasir', [{ id: '', nama: 'Semua Kasir' }, ...state.kasir.map(k => ({ id: k.nama, nama: k.nama }))], 'id', '{nama}');
         renderLoginKasir();
         
-        // Check koneksi database Google Sheets
         testConnectionStatus();
     }
 
@@ -694,13 +705,11 @@
             opt.value = item[valKey];
             
             let label = labelTemplate;
-            // Jika template menggunakan format bracket seperti "{nama} (Stok: {stok})"
             if (label.includes('{')) {
                 label = label.replace(/\{(\w+)\}/g, (match, key) => {
                     return item[key] !== undefined ? item[key] : '';
                 });
             } else {
-                // Jika hanya string nama field biasa (contoh: "nama")
                 label = item[labelTemplate] !== undefined ? item[labelTemplate] : labelTemplate;
             }
             
@@ -710,7 +719,7 @@
     }
 
     // ============================================================
-    // ANGGOTA CRUD (Menggunakan flag _dirty untuk tracking sinkronisasi)
+    // ANGGOTA CRUD
     // ============================================================
     function renderAnggota() {
         const tbody = document.getElementById('table-anggota');
@@ -724,7 +733,7 @@
                 <td class="p-4 text-slate-500">${a.no_telp || '-'}</td>
                 <td class="p-4 text-right font-bold text-emerald-700">${formatRupiah(Number(a.saldo || 0))}</td>
                 <td class="p-4 text-center space-x-1">
-                    <button onclick="editAnggota('${a.id}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-650 hover:bg-indigo-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="editAnggota('${a.id}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-655 hover:bg-indigo-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="hapusAnggota('${a.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-trash"></i></button>
                 </td>`;
             tbody.appendChild(tr);
@@ -772,7 +781,7 @@
                 a.alamat = alamat; 
                 a.no_telp = telp; 
                 a.saldo = saldo; 
-                a._dirty = true; // Tandai data telah diedit secara lokal
+                a._dirty = true; 
             }
             showToast('Data Anggota diperbarui');
         } else {
@@ -784,7 +793,7 @@
         saveState();
         tutupModal('modal-anggota');
         renderAll();
-        syncData(); // Picu proses auto-sync
+        syncData(); 
     }
 
     function editAnggota(id) { 
@@ -795,11 +804,11 @@
         const confirmed = await showCustomConfirm('Apakah Anda yakin ingin menghapus Anggota ini? Data akan segera disinkronkan ke Cloud.', 'Hapus Anggota');
         if (confirmed) {
             state.anggota = state.anggota.filter(a => a.id !== id);
-            state.deletedIds.push(id); // Catat ID agar terhapus permanen di Google Sheet
+            state.deletedIds.push(id); 
             saveState();
             renderAll();
             showToast('Anggota berhasil dihapus');
-            syncData(); // Kirim perubahan ke cloud
+            syncData(); 
         }
     }
 
@@ -817,7 +826,7 @@
                 <td class="p-4 text-right font-medium text-emerald-700">${formatRupiah(Number(b.harga))}</td>
                 <td class="p-4 text-center font-semibold ${Number(b.stok) < 5 ? 'text-rose-600 animate-pulse' : 'text-slate-705'}">${b.stok}</td>
                 <td class="p-4 text-center space-x-1">
-                    <button onclick="editBarang('${b.id}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-650 hover:bg-indigo-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="editBarang('${b.id}')" class="px-2.5 py-1 bg-indigo-50 text-indigo-655 hover:bg-indigo-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="hapusBarang('${b.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md text-xs font-semibold transition"><i class="fa-solid fa-trash"></i></button>
                 </td>`;
             tbody.appendChild(tr);
@@ -857,7 +866,7 @@
                 b.nama = nama; 
                 b.harga = harga; 
                 b.stok = stok; 
-                b._dirty = true; // Tandai data telah diedit secara lokal
+                b._dirty = true; 
             }
             showToast('Data barang diperbarui');
         } else {
@@ -880,7 +889,7 @@
         const confirmed = await showCustomConfirm('Apakah Anda yakin ingin menghapus barang ini?', 'Hapus Barang');
         if (confirmed) {
             state.barang = state.barang.filter(b => b.id !== id);
-            state.deletedIds.push(id); // Catat ID agar terhapus di Google Sheet
+            state.deletedIds.push(id); 
             saveState();
             renderAll();
             showToast('Barang berhasil dihapus');
@@ -958,14 +967,20 @@
         if (!anggota) { showToast('Anggota tidak valid', 'error'); return; }
         
         const total = cart.reduce((sum, i) => sum + i.harga * i.qty, 0);
+        const metodeBayar = document.getElementById('kasir-metode-bayar').value;
         
-        // Aturan Koperasi: Anggota membayar dengan saldo simpanannya
-        if (Number(anggota.saldo) < total) {
-            showToast(`Saldo anggota tidak mencukupi! Saldo: ${formatRupiah(Number(anggota.saldo))}`, 'error');
-            return;
+        // Pengecekan dan pemotongan saldo HANYA berlaku jika memilih metode "Saldo"
+        if (metodeBayar === 'Saldo') {
+            if (Number(anggota.saldo) < total) {
+                showToast(`Saldo anggota tidak mencukupi! Saldo saat ini: ${formatRupiah(Number(anggota.saldo))}`, 'error');
+                return;
+            }
+            // Kurangi saldo simpanan anggota jika bayar dengan saldo
+            anggota.saldo = Number(anggota.saldo) - total;
+            anggota._dirty = true;
         }
 
-        // Cek kembali ketersediaan stok
+        // Cek kembali ketersediaan stok produk
         for (let item of cart) {
             const barang = state.barang.find(b => b.id === item.id);
             if (!barang || Number(barang.stok) < item.qty) {
@@ -974,7 +989,7 @@
             }
         }
 
-        // Jalankan transaksi (Potong stok barang & potong saldo anggota)
+        // Jalankan pemotongan stok inventaris
         for (let item of cart) {
             const barang = state.barang.find(b => b.id === item.id);
             if (barang) {
@@ -982,9 +997,6 @@
                 barang._dirty = true;
             }
         }
-        
-        anggota.saldo = Number(anggota.saldo) - total;
-        anggota._dirty = true;
 
         const newTrans = {
             id: generateId('T'),
@@ -993,7 +1005,8 @@
             kasir: currentKasir,
             total: total,
             items: JSON.stringify(cart),
-            _dirty: true // tandai transaksi baru agar tersimpan di cloud
+            metode: metodeBayar, // Simpan informasi metode pembayaran dalam log transaksi
+            _dirty: true 
         };
         
         state.transaksi.push(newTrans);
@@ -1003,7 +1016,11 @@
         renderAll();
         loadKasir();
         
-        showToast('Transaksi Berhasil! Saldo anggota telah dipotong.');
+        if (metodeBayar === 'Saldo') {
+            showToast('Transaksi Berhasil! Saldo koperasi milik anggota telah dipotong.');
+        } else {
+            showToast('Transaksi Berhasil! Pembayaran dilakukan menggunakan Tunai (Cash).');
+        }
         syncData();
     }
 
@@ -1020,6 +1037,7 @@
         
         todayTrans.slice().reverse().forEach(t => {
             const anggota = state.anggota.find(a => a.id === t.id_anggota);
+            const metodeText = t.metode === 'Saldo' ? 'Saldo' : 'Tunai';
             const div = document.createElement('div');
             div.className = 'p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1 shadow-sm';
             div.innerHTML = `
@@ -1028,7 +1046,7 @@
                     <span class="text-emerald-700 font-bold">${formatRupiah(Number(t.total))}</span>
                 </div>
                 <div class="flex justify-between text-[10px] text-slate-400">
-                    <span>ID: ${t.id}</span>
+                    <span>ID: ${t.id} (${metodeText})</span>
                     <span>Kasir: ${t.kasir}</span>
                 </div>`;
             container.appendChild(div);
@@ -1098,12 +1116,16 @@
         if (filterTgl) filtered = filtered.filter(t => t.tanggal === filterTgl);
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada transaksi ditemukan</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Tidak ada transaksi ditemukan</td></tr>';
             return;
         }
         
         filtered.slice().reverse().forEach(t => {
             const anggota = state.anggota.find(a => a.id === t.id_anggota);
+            const metodeBadge = t.metode === 'Saldo' 
+                ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 text-indigo-650 rounded-full border border-indigo-150">Saldo</span>' 
+                : '<span class="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-650 rounded-full border border-amber-150">Tunai</span>';
+            
             let items = [];
             try {
                 items = typeof t.items === 'string' ? JSON.parse(t.items) : (t.items || []);
@@ -1116,6 +1138,7 @@
                 <td class="p-4">${t.tanggal}</td>
                 <td class="p-4 font-semibold text-slate-800">${anggota ? anggota.nama : '-'}</td>
                 <td class="p-4 text-slate-500">${t.kasir || 'Admin'}</td>
+                <td class="p-4">${metodeBadge}</td>
                 <td class="p-4 text-right font-bold text-emerald-700">${formatRupiah(Number(t.total))}</td>
                 <td class="p-4 text-xs text-slate-500 font-mono">${items.map(i => i.nama + ' (x' + i.qty + ')').join(', ')}</td>`;
             tbody.appendChild(tr);
@@ -1132,9 +1155,10 @@
         
         if (filtered.length === 0) { showToast('Tidak ada data untuk diekspor', 'error'); return; }
         
-        let csv = 'Tanggal,Anggota,Kasir,Total,Items\n';
+        let csv = 'Tanggal,Anggota,Kasir,Metode Pembayaran,Total,Items\n';
         filtered.forEach(t => {
             const anggota = state.anggota.find(a => a.id === t.id_anggota);
+            const metodeText = t.metode === 'Saldo' ? 'Saldo Koperasi' : 'Tunai';
             let items = [];
             try {
                 items = typeof t.items === 'string' ? JSON.parse(t.items) : (t.items || []);
@@ -1142,7 +1166,7 @@
                 items = [];
             }
             const itemString = items.map(i => i.nama + ' x' + i.qty).join('; ');
-            csv += `${t.tanggal},${anggota ? anggota.nama : '-'},${t.kasir || 'Admin'},${Number(t.total)},"${itemString}"\n`;
+            csv += `${t.tanggal},${anggota ? anggota.nama : '-'},${t.kasir || 'Admin'},${metodeText},${Number(t.total)},"${itemString}"\n`;
         });
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1164,25 +1188,18 @@
         });
     }
 
-    // Fungsi utilitas untuk menggabungkan cloud dan local dengan aman
     function mergeDataCloudLocal(localList, cloudList, deletedIds, key = 'id') {
-        // 1. Saring/Hapus data cloud yang ID-nya masuk daftar deletedIds lokal
         const activeCloud = (cloudList || []).filter(item => !deletedIds.includes(item[key]));
-        
-        // 2. Buat map penyimpanan data hasil merge (menggunakan data cloud sebagai pondasi)
         const mergedMap = new Map(activeCloud.map(item => [item[key], { ...item }]));
         
-        // 3. Masukkan data lokal baru atau timpa data cloud jika data lokal berstatus _dirty
         (localList || []).forEach(localItem => {
-            if (deletedIds.includes(localItem[key])) return; // Abaikan jika masuk daftar hapus
+            if (deletedIds.includes(localItem[key])) return; 
             
             if (localItem._dirty) {
-                // Ada perubahan terbaru di lokal, wajib timpa data cloud
                 const cleanItem = { ...localItem };
-                delete cleanItem._dirty; // Hapus flag sebelum dikirim
+                delete cleanItem._dirty; 
                 mergedMap.set(localItem[key], cleanItem);
             } else if (!mergedMap.has(localItem[key])) {
-                // Data baru di lokal yang belum ada di cloud
                 mergedMap.set(localItem[key], { ...localItem });
             }
         });
@@ -1190,12 +1207,10 @@
         return Array.from(mergedMap.values());
     }
 
-    // Penggabungan data Kasir kustom (berdasarkan field "nama" sebagai primary key)
     function mergeKasirCloudLocal(localKasir, cloudKasir) {
         const mergedMap = new Map((cloudKasir || []).map(k => [k.nama, { ...k }]));
         
         (localKasir || []).forEach(localK => {
-            // Jika ada kasir lokal bertanda baru/dirubah (_dirty), prioritaskan data lokal
             if (localK._dirty) {
                 const cleanItem = { ...localK };
                 delete cleanItem._dirty;
@@ -1221,7 +1236,6 @@
         showToast('Menghubungkan ke Google Sheets...', 'warning');
 
         try {
-            // LANGKAH 1: Ambil data terkini dari cloud (GET)
             const getResp = await fetch(url, { method: 'GET', redirect: 'follow' });
             if (!getResp.ok) throw new Error(`HTTP ${getResp.status}`);
             
@@ -1231,19 +1245,16 @@
                 throw new Error(cloudData.message || "Error saat membaca database.");
             }
 
-            // LANGKAH 2: Lakukan Bidirectional Merge Cerdas (Lokal <==> Cloud)
             const mergedAnggota = mergeDataCloudLocal(state.anggota, cloudData.anggota, state.deletedIds, 'id');
             const mergedBarang = mergeDataCloudLocal(state.barang, cloudData.barang, state.deletedIds, 'id');
             const mergedTransaksi = mergeDataCloudLocal(state.transaksi, cloudData.transaksi, state.deletedIds, 'id');
-            const mergedKasir = mergeKasirCloudLocal(state.kasir, cloudData.kasir); // <-- Sinkronisasi Kasir Baru
+            const mergedKasir = mergeKasirCloudLocal(state.kasir, cloudData.kasir); 
 
-            // LANGKAH 3: Simpan Hasil Merge ke State Lokal
             state.anggota = mergedAnggota;
             state.barang = mergedBarang;
             state.transaksi = mergedTransaksi;
-            state.kasir = mergedKasir; // <-- Update database kasir di lokal browser
+            state.kasir = mergedKasir; 
             
-            // Konversi tipe data numerik pasca-sinkronisasi
             state.anggota.forEach(a => a.saldo = Number(a.saldo || 0));
             state.barang.forEach(b => {
                 b.harga = Number(b.harga || 0);
@@ -1251,29 +1262,26 @@
             });
             state.transaksi.forEach(t => t.total = Number(t.total || 0));
 
-            // Bersihkan flag '_dirty' lokal karena data telah seimbang
             state.anggota.forEach(a => delete a._dirty);
             state.barang.forEach(b => delete b._dirty);
             state.transaksi.forEach(t => delete t._dirty);
             state.kasir.forEach(k => delete k._dirty);
             
-            // Bersihkan daftar tampungan ID terhapus pasca sinkronisasi sukses
             state.deletedIds = [];
             
             saveState();
             renderAll();
 
-            // LANGKAH 4: Kirim data yang telah bersih kembali ke Google Sheets (POST)
             const payload = { 
                 anggota: state.anggota, 
                 barang: state.barang, 
                 transaksi: state.transaksi,
-                kasir: state.kasir // <-- Kirim data kasir (termasuk kasir baru / ganti password) ke Sheets
+                kasir: state.kasir 
             };
             
             const postResp = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain menghindari CORS preflight block
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
                 body: JSON.stringify(payload),
                 redirect: 'follow'
             });
@@ -1282,7 +1290,6 @@
 
             showToast('✅ Database Sinkron! Data Cloud & Lokal telah diselaraskan.');
             
-            // Perbarui visual koneksi
             const indicator = document.getElementById('conn-indicator');
             const status = document.getElementById('conn-status');
             indicator.className = 'h-2.5 w-2.5 rounded-full bg-emerald-500 mr-2';
@@ -1292,7 +1299,6 @@
             console.error('Sync Error:', err);
             showToast('⚠️ Gagal sinkronisasi. Menggunakan database lokal.', 'error');
             
-            // Perbarui visual koneksi ke mode lokal saja
             const indicator = document.getElementById('conn-indicator');
             const status = document.getElementById('conn-status');
             indicator.className = 'h-2.5 w-2.5 rounded-full bg-amber-500 mr-2 animate-pulse';
@@ -1320,14 +1326,12 @@
         renderAll();
         switchTab('dashboard');
 
-        // Navigasi Menu Mobile
         document.getElementById('mobile-menu-btn').addEventListener('click', function() {
             document.getElementById('sidebar-menu').classList.toggle('hidden');
         });
         
         document.getElementById('filter-laporan-tgl').value = todayStr();
 
-        // Jalankan auto-sync 1.5 detik setelah aplikasi dimuat ke browser
         setTimeout(() => {
             if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== '') {
                 syncData();
@@ -1337,10 +1341,3 @@
 </script>
 </body>
 </html>
-```
-eof
-
-### Perbaikan yang Diterapkan:
-1. **Pembersihan Teks Mentah:** Semua kode obrolan/teks penjelasan di bagian paling bawah file yang merusak tag penutup HTML telah sepenuhnya dihilangkan.
-2. **Kesesuaian Tag:** Menjamin penutupan tag yang sempurna pada seluruh bagian kontainer halaman.
-3. **Penyatuan Kode Utuh:** File HTML di atas telah mandiri dan mencakup seluruh perbaikan visual serta filter kasir pada menu laporan (tidak ada lagi error `[object Object]`).
