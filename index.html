@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistem Penjualan Koperasi</title>
+    <title>Sistem Koperasi - Sync dengan Google Sheets</title>
     <!-- Tailwind CSS & Google Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -46,19 +46,26 @@
 
 <!-- LOGIN KASIR -->
 <div id="login-overlay">
-    <div class="bg-white p-8 rounded-2xl max-w-sm w-full shadow-2xl text-center space-y-5">
+    <div class="bg-white p-8 rounded-2xl max-w-sm w-full shadow-2xl text-center space-y-4">
         <div class="mx-auto bg-emerald-100 text-emerald-600 w-16 h-16 rounded-full flex items-center justify-center">
             <i class="fa-solid fa-user-tie text-3xl"></i>
         </div>
-        <h2 class="text-xl font-bold">Login Kasir</h2>
-        <p class="text-sm text-slate-500">Pilih nama kasir yang bertugas</p>
-        <select id="login-kasir-select" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></select>
-        <div class="flex gap-2">
-            <input type="text" id="login-kasir-new" placeholder="Nama kasir baru" class="flex-1 p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-            <button onclick="tambahKasir()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm transition"><i class="fa-solid fa-plus"></i></button>
+        <h2 class="text-xl font-bold text-slate-800">Login Kasir</h2>
+        <p class="text-sm text-slate-500">Pilih kasir dan masukkan password</p>
+        
+        <div class="space-y-3 text-left">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Kasir</label>
+                <select id="login-kasir-select" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Password</label>
+                <input type="password" id="login-kasir-password" placeholder="••••" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
         </div>
+
         <button onclick="loginKasir()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">Masuk</button>
-        <div id="login-error" class="text-rose-500 text-sm hidden">Silakan pilih atau tambahkan kasir</div>
+        <div id="login-error" class="text-rose-500 text-sm hidden">Password salah atau kasir tidak valid!</div>
     </div>
 </div>
 
@@ -97,7 +104,11 @@
 
         <div class="p-4 border-t border-slate-800 text-center text-[11px] text-slate-500 bg-slate-950/40">
             <p>Kasir Aktif: <span id="sidebar-kasir" class="text-white font-semibold">-</span></p>
-            <button onclick="logoutKasir()" class="mt-2 text-xs text-rose-450 hover:text-rose-400 transition font-medium"><i class="fa-solid fa-sign-out-alt mr-1"></i> Keluar</button>
+            <div class="mt-2 flex justify-center gap-3">
+                <button onclick="bukaModalGantiPassword()" class="text-xs text-indigo-400 hover:text-indigo-300 transition font-medium"><i class="fa-solid fa-key mr-1"></i> Ganti Password</button>
+                <span class="text-slate-800">|</span>
+                <button onclick="logoutKasir()" class="text-xs text-rose-450 hover:text-rose-400 transition font-medium"><i class="fa-solid fa-sign-out-alt mr-1"></i> Keluar</button>
+            </div>
         </div>
     </aside>
 
@@ -281,44 +292,7 @@
 
         </div>
     </main>
-</div>
-
-<!-- MODAL ANGGOTA -->
-<div id="modal-anggota" class="modal">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
-            <h3 class="font-bold text-slate-800 text-lg" id="modal-anggota-title">Tambah Anggota</h3>
-            <button onclick="tutupModal('modal-anggota')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-        </div>
-        <input type="hidden" id="modal-anggota-id">
-        <div class="space-y-3">
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Nama Anggota</label><input type="text" id="modal-anggota-nama" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Alamat Rumah</label><input type="text" id="modal-anggota-alamat" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">No Telepon/WA</label><input type="text" id="modal-anggota-telp" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Saldo Simpanan Awal (Rp)</label><input type="number" id="modal-anggota-saldo" value="0" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <button onclick="simpanAnggota()" class="w-full bg-indigo-650 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold transition shadow-md shadow-indigo-650/10">Simpan & Sinkronkan</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL BARANG -->
-<div id="modal-barang" class="modal">
-    <div class="modal-content">
-        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
-            <h3 class="font-bold text-slate-800 text-lg" id="modal-barang-title">Tambah Barang</h3>
-            <button onclick="tutupModal('modal-barang')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-        </div>
-        <input type="hidden" id="modal-barang-id">
-        <div class="space-y-3">
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Nama Barang</label><input type="text" id="modal-barang-nama" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Harga Satuan (Rp)</label><input type="number" id="modal-barang-harga" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <div><label class="block text-xs font-semibold text-slate-500 mb-1">Jumlah Stok Awal</label><input type="number" id="modal-barang-stok" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
-            <button onclick="simpanBarang()" class="w-full bg-indigo-650 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold transition shadow-md shadow-indigo-650/10">Simpan & Sinkronkan</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL KONFIRMASI (Menggantikan confirm() bawaan) -->
+<!-- MODAL CONFIRM -->
 <div id="modal-confirm" class="modal">
     <div class="modal-content max-w-sm">
         <div class="text-center space-y-4">
@@ -331,6 +305,31 @@
                 <button id="confirm-cancel-btn" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition">Batal</button>
                 <button id="confirm-ok-btn" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition shadow-md shadow-rose-650/10">Ya, Lanjutkan</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL GANTI PASSWORD -->
+<div id="modal-ganti-password" class="modal">
+    <div class="modal-content max-w-sm">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+            <h3 class="font-bold text-slate-800 text-lg">Ganti Password Kasir</h3>
+            <button onclick="tutupModal('modal-ganti-password')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Password Lama</label>
+                <input type="password" id="ganti-pass-lama" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Password Baru</label>
+                <input type="password" id="ganti-pass-baru" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Konfirmasi Password Baru</label>
+                <input type="password" id="ganti-pass-konfirmasi" class="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <button onclick="simpanPasswordBaru()" class="w-full bg-indigo-650 hover:bg-indigo-700 text-white py-3 rounded-lg text-sm font-bold transition shadow-md shadow-indigo-650/10">Simpan Password</button>
         </div>
     </div>
 </div>
@@ -375,6 +374,14 @@
             }
         }
         
+        // Migrasi kasir dari string biasa ke tipe objek ber-password
+        state.kasir = state.kasir.map(k => {
+            if (typeof k === 'string') {
+                return { nama: k, password: "123" };
+            }
+            return k;
+        });
+        
         // Setup template lokal awal jika kosong sama sekali
         if (state.anggota.length === 0 && state.barang.length === 0 && state.kasir.length === 0) {
             state.anggota = [
@@ -386,7 +393,11 @@
                 { id: "B002", nama: "Minyak Goreng 2L", harga: 28000, stok: 30 },
                 { id: "B003", nama: "Gula Pasir 1kg", harga: 18000, stok: 40 }
             ];
-            state.kasir = ["Admin", "Budi", "Siti"];
+            state.kasir = [
+                { nama: "Admin", password: "123" },
+                { nama: "Budi", password: "123" },
+                { nama: "Siti", password: "123" }
+            ];
             saveState();
         }
     }
@@ -464,8 +475,8 @@
         sel.innerHTML = "";
         state.kasir.forEach(k => {
             const opt = document.createElement("option");
-            opt.value = k;
-            opt.innerText = k;
+            opt.value = k.nama;
+            opt.innerText = k.nama;
             sel.appendChild(opt);
         });
         if (state.kasir.length === 0) {
@@ -478,14 +489,21 @@
 
     function tambahKasir() {
         const input = document.getElementById("login-kasir-new");
+        const inputPass = document.getElementById("login-kasir-new-password");
         const nama = input.value.trim();
+        const password = inputPass.value.trim();
+        
         if (!nama) { showToast("Masukkan nama kasir baru", "error"); return; }
-        if (!state.kasir.includes(nama)) {
-            state.kasir.push(nama);
+        if (!password) { showToast("Masukkan password untuk kasir baru", "error"); return; }
+        
+        const exists = state.kasir.some(k => k.nama.toLowerCase() === nama.toLowerCase());
+        if (!exists) {
+            state.kasir.push({ nama, password });
             saveState();
             renderLoginKasir();
             input.value = "";
-            showToast("Kasir ditambahkan!");
+            inputPass.value = "";
+            showToast("Kasir berhasil ditambahkan!");
         } else {
             showToast("Nama kasir sudah ada!", "error");
         }
@@ -493,17 +511,31 @@
 
     function loginKasir() {
         const sel = document.getElementById("login-kasir-select");
+        const passInput = document.getElementById("login-kasir-password");
         const nama = sel.value;
+        const password = passInput.value;
+        
         if (!nama) {
-            document.getElementById("login-error").classList.remove("hidden");
+            const errorDiv = document.getElementById("login-error");
+            errorDiv.innerText = "Silakan pilih atau tambahkan kasir";
+            errorDiv.classList.remove("hidden");
             return;
         }
-        document.getElementById("login-error").classList.add("hidden");
-        currentKasir = nama;
-        document.getElementById("login-overlay").classList.add("hidden");
-        document.getElementById("sidebar-kasir").innerText = nama;
-        showToast("Selamat bertugas, " + nama);
-        renderAll();
+        
+        const kasirObj = state.kasir.find(k => k.nama === nama);
+        if (kasirObj && kasirObj.password === password) {
+            document.getElementById("login-error").classList.add("hidden");
+            currentKasir = nama;
+            document.getElementById("login-overlay").classList.add("hidden");
+            document.getElementById("sidebar-kasir").innerText = nama;
+            passInput.value = ""; // Bersihkan field setelah login sukses
+            showToast("Selamat bertugas, " + nama);
+            renderAll();
+        } else {
+            const errorDiv = document.getElementById("login-error");
+            errorDiv.innerText = "Password salah!";
+            errorDiv.classList.remove("hidden");
+        }
     }
 
     function logoutKasir() {
@@ -514,6 +546,48 @@
         renderCart();
         document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
         switchTab('dashboard');
+    }
+
+    // ============================================================
+    // MENU PASSWORD MODAL ACTION
+    // ============================================================
+    function bukaModalGantiPassword() {
+        document.getElementById('modal-ganti-password').classList.add('open');
+        document.getElementById('ganti-pass-lama').value = '';
+        document.getElementById('ganti-pass-baru').value = '';
+        document.getElementById('ganti-pass-konfirmasi').value = '';
+    }
+    
+    function simpanPasswordBaru() {
+        const passLama = document.getElementById('ganti-pass-lama').value;
+        const passBaru = document.getElementById('ganti-pass-baru').value;
+        const passKonf = document.getElementById('ganti-pass-konfirmasi').value;
+        
+        if (!passLama || !passBaru || !passKonf) {
+            showToast('Semua kolom password wajib diisi!', 'error');
+            return;
+        }
+        
+        const kasirObj = state.kasir.find(k => k.nama === currentKasir);
+        if (!kasirObj) {
+            showToast('Kasir tidak ditemukan!', 'error');
+            return;
+        }
+        
+        if (kasirObj.password !== passLama) {
+            showToast('Password lama tidak cocok!', 'error');
+            return;
+        }
+        
+        if (passBaru !== passKonf) {
+            showToast('Konfirmasi password baru tidak cocok!', 'error');
+            return;
+        }
+        
+        kasirObj.password = passBaru;
+        saveState();
+        tutupModal('modal-ganti-password');
+        showToast('Password kasir berhasil diperbarui!');
     }
 
     // ============================================================
@@ -545,7 +619,7 @@
         renderLaporan();
         
         populateSelect('kasir-anggota', state.anggota, 'id', 'nama');
-        populateSelect('kasir-barang', state.barang, 'id', 'nama (Stok: {stok})', 'stok');
+        populateSelect('kasir-barang', state.barang, 'id', '{nama} (Stok: {stok})');
         populateSelect('filter-laporan-kasir', [{ id: '', nama: 'Semua Kasir' }, ...state.kasir.map(k => ({ id: k, nama: k }))], 'id', 'nama');
         renderLoginKasir();
         
@@ -575,19 +649,25 @@
         }
     }
 
-    function populateSelect(id, data, valKey, labelTemplate, extra) {
+    function populateSelect(id, data, valKey, labelTemplate) {
         const sel = document.getElementById(id);
         if (!sel) return;
         sel.innerHTML = '';
         data.forEach(item => {
             const opt = document.createElement('option');
             opt.value = item[valKey];
+            
             let label = labelTemplate;
-            if (labelTemplate.includes('{stok}') && extra) {
-                label = labelTemplate.replace(/{stok}/g, item[extra]);
+            // Jika template menggunakan format bracket seperti "{nama} (Stok: {stok})"
+            if (label.includes('{')) {
+                label = label.replace(/\{(\w+)\}/g, (match, key) => {
+                    return item[key] !== undefined ? item[key] : '';
+                });
             } else {
-                label = item.nama;
+                // Jika hanya string nama field biasa (contoh: "nama")
+                label = item[labelTemplate] !== undefined ? item[labelTemplate] : labelTemplate;
             }
+            
             opt.innerText = label;
             sel.appendChild(opt);
         });
@@ -777,7 +857,7 @@
     // ============================================================
     function loadKasir() {
         populateSelect('kasir-anggota', state.anggota, 'id', 'nama');
-        populateSelect('kasir-barang', state.barang, 'id', 'nama (Stok: {stok})', 'stok');
+        populateSelect('kasir-barang', state.barang, 'id', '{nama} (Stok: {stok})');
         renderCart();
         renderTodayTransactions();
     }
@@ -1074,6 +1154,24 @@
         return Array.from(mergedMap.values());
     }
 
+    // Penggabungan data Kasir kustom (berdasarkan field "nama" sebagai primary key)
+    function mergeKasirCloudLocal(localKasir, cloudKasir) {
+        const mergedMap = new Map((cloudKasir || []).map(k => [k.nama, { ...k }]));
+        
+        (localKasir || []).forEach(localK => {
+            // Jika ada kasir lokal bertanda baru/dirubah (_dirty), prioritaskan data lokal
+            if (localK._dirty) {
+                const cleanItem = { ...localK };
+                delete cleanItem._dirty;
+                mergedMap.set(localK.nama, cleanItem);
+            } else if (!mergedMap.has(localK.nama)) {
+                mergedMap.set(localK.nama, { ...localK });
+            }
+        });
+        
+        return Array.from(mergedMap.values());
+    }
+
     async function syncData() {
         const url = GOOGLE_SCRIPT_URL;
         if (!url || url.trim() === '') {
@@ -1101,11 +1199,13 @@
             const mergedAnggota = mergeDataCloudLocal(state.anggota, cloudData.anggota, state.deletedIds, 'id');
             const mergedBarang = mergeDataCloudLocal(state.barang, cloudData.barang, state.deletedIds, 'id');
             const mergedTransaksi = mergeDataCloudLocal(state.transaksi, cloudData.transaksi, state.deletedIds, 'id');
+            const mergedKasir = mergeKasirCloudLocal(state.kasir, cloudData.kasir); // <-- Sinkronisasi Kasir Baru
 
             // LANGKAH 3: Simpan Hasil Merge ke State Lokal
             state.anggota = mergedAnggota;
             state.barang = mergedBarang;
             state.transaksi = mergedTransaksi;
+            state.kasir = mergedKasir; // <-- Update database kasir di lokal browser
             
             // Konversi tipe data numerik pasca-sinkronisasi
             state.anggota.forEach(a => a.saldo = Number(a.saldo || 0));
@@ -1119,6 +1219,7 @@
             state.anggota.forEach(a => delete a._dirty);
             state.barang.forEach(b => delete b._dirty);
             state.transaksi.forEach(t => delete t._dirty);
+            state.kasir.forEach(k => delete k._dirty);
             
             // Bersihkan daftar tampungan ID terhapus pasca sinkronisasi sukses
             state.deletedIds = [];
@@ -1130,7 +1231,8 @@
             const payload = { 
                 anggota: state.anggota, 
                 barang: state.barang, 
-                transaksi: state.transaksi 
+                transaksi: state.transaksi,
+                kasir: state.kasir // <-- Kirim data kasir (termasuk kasir baru / ganti password) ke Sheets
             };
             
             const postResp = await fetch(url, {
@@ -1189,10 +1291,6 @@
         
         document.getElementById('filter-laporan-tgl').value = todayStr();
 
-        document.getElementById('login-kasir-new').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') tambahKasir();
-        });
-
         // Jalankan auto-sync 1.5 detik setelah aplikasi dimuat ke browser
         setTimeout(() => {
             if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.trim() !== '') {
@@ -1203,3 +1301,4 @@
 </script>
 </body>
 </html>
+```
